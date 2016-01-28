@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="
+	http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+	http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+	http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<int:channel id="messageChannel">
+		<int:dispatcher task-executor="dispatherExecutor" />
+	</int:channel>
+
+	<task:executor id="dispatherExecutor" pool-size="1" />
+
+	<int:aggregator input-channel="messageChannel" discard-channel="errorChannel"
+		output-channel="messageOutChannel" send-partial-result-on-expiry="true"
+		expire-groups-upon-completion="true">
+	</int:aggregator>
+
+	<task:scheduler id="timeoutScheduler" pool-size="1" />
+	
+<!-- 
+	<bean id="releaseStrategyBean" class="com.intertech.releasers.SimpleReleaseStrategy">
+		<constructor-arg type="int" value="1000" />
+	</bean>
+
+	<bean id="correlationStrategyBean" class="com.intertech.correlations.SimpleCorrelation" /> -->
+
+	<int:channel id="messageOutChannel" />
+
+	<int:outbound-channel-adapter ref="timePrinter"
+		method="printTimeS" channel="messageOutChannel" />
+
+	<bean id="timePrinter" class="com.intertech.timers.MessageTimer" />
+
+	<int:channel id="errorChannel" />
+	<int-stream:stderr-channel-adapter
+		id="errorConsumer" channel="errorChannel" append-newline="true" />
+
+</beans>
+
+
+<!-- discard-channel="errorChannel" scheduler="timeoutScheduler" release-strategy-expression="[0].headers.sequenceNumber 
+	== [0].headers.sequenceSize" group-timeout-expression="size() ge 2 ? 10 : 
+	-1" group-timeout-expression="size() ge 2 ? 0 : -1" release-strategy="releaseStrategyBean" 
+	release-strategy-method="canReleaseN" expire-groups-upon-completion="true" 
+	group-timeout-expression="size() ge 50 ? 150 : -1" release-strategy="releaseStrategyBean" 
+	release-strategy-method="canReleaseN" release-strategy="releaseStrategyBean" 
+	release-strategy-method="canReleaseM" group-timeout="500" <int:aggregator 
+	input-channel="messageChannel" output-channel="messageOutChannel" send-partial-result-on-expiry="true" 
+	correlation-strategy="correlationStrategyBean" correlation-strategy-method="groupByCorrelationID" 
+	release-strategy="releaseStrategyBean" release-strategy-method="canReleaseM" 
+	group-timeout="500" expire-groups-upon-completion="true" scheduler="timeoutScheduler"> 
+	</int:aggregator> -->
